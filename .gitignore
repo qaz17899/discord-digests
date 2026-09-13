@@ -1,0 +1,26 @@
+# --- secrets (never commit) ---
+.env
+.env.local
+config.json
+
+# --- local runtime state ---
+gateway.json
+watch.heartbeat
+schedule.json
+
+# --- collected data ---
+raw/
+reports/
+jobs/
+logs/
+
+# --- build outputs ---
+*.exe
+*.exe~
+webui/dist/
+webui/node_modules/
+
+# --- agent / editor scratch ---
+.codex/
+.DS_Store
+Thumbs.db

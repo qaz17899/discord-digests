@@ -1,0 +1,354 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #06070a;
+  --color-panel: #0b0e13;
+  --color-panel2: #10141c;
+  --color-panel3: #161b25;
+  --color-edge: #1d2432;
+  --color-snow: #e9ecf3;
+  --color-fog: #8b93a7;
+  --color-dim: #59617a;
+  --color-lime: #b9f34c;
+  --color-limedim: #7ba62e;
+  --color-blurple: #7a7cff;
+  --color-danger: #ff6157;
+  --color-amber: #ffb020;
+  --color-cyan: #56d6ff;
+  --color-pink: #ff7ad9;
+
+  --font-display: "Space Grotesk", "Noto Sans TC", system-ui, sans-serif;
+  --font-sans: "Space Grotesk", "Noto Sans TC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans TC", ui-monospace, monospace;
+}
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-ink);
+  color: var(--color-snow);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-lime);
+  color: #0a0c04;
+}
+
+/* ---------- scrollbars ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(185, 243, 76, 0.35);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- texture layers ---------- */
+.noise-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.grid-layer {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 75%);
+}
+
+/* ---------- micro label ---------- */
+.micro-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.font-700 { font-weight: 700; }
+
+/* ---------- keyframes ---------- */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.caret-blink { animation: caret-blink 0.9s step-end infinite; }
+
+@keyframes shimmer-x {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(220%); }
+}
+.shimmer-bar { animation: shimmer-x 1.4s ease-in-out infinite; }
+
+@keyframes flash-row {
+  0% { background: rgba(185, 243, 76, 0.22); }
+  100% { background: transparent; }
+}
+.flash-row { animation: flash-row 2.2s ease-out forwards; }
+
+@keyframes scan-y {
+  0% { top: -10%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 105%; opacity: 0; }
+}
+.scan-line { animation: scan-y 7s linear infinite; }
+
+/* 控制台的區塊切換：區塊一直留在 DOM 裡（切走再切回來不會掉設定），
+   所以進場動畫用 CSS 重播，不用 framer 重新掛載。 */
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.section-in { animation: section-in 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ---------- shared panel ---------- */
+.panel {
+  background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0)) , var(--color-panel);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+}
+
+/* 只有實際要看的那幾十張圖會在 DOM 裡（滾動時一批一批進來），所以不需要
+   content-visibility 幫忙跳過排版 —— 它反而會讓還沒進畫面的磚塊被塞成 260px，
+   跟保留的格子不符而互相壓到，進畫面時又突然變回真高度（就是抖動的來源之一）。 */
+
+/* Two handles over one 24-hour scale: start and end of the media time window. */
+.hour-slider {
+  flex: 1;
+  appearance: none;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+.hour-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--color-lime);
+  border: 2px solid #0b0e08;
+  cursor: grab;
+}
+.hour-slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #0b0e08;
+  border-radius: 999px;
+  background: var(--color-lime);
+  cursor: grab;
+}
+
+.glow-hover {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+.glow-hover:hover {
+  border-color: rgba(185, 243, 76, 0.35);
+  box-shadow: 0 8px 40px -12px rgba(185, 243, 76, 0.14), 0 2px 0 0 rgba(185, 243, 76, 0.08) inset;
+}
+
+/* ---------- form controls (settings page) ---------- */
+.input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 7px 11px;
+  font-size: 13px;
+  color: var(--color-snow);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input::placeholder { color: rgba(255, 255, 255, 0.28); }
+.input:focus {
+  border-color: rgba(185, 243, 76, 0.45);
+  box-shadow: 0 0 0 3px rgba(185, 243, 76, 0.08);
+}
+
+.btn-primary, .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 7px 13px;
+  font-size: 12px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.btn-primary {
+  border: 1px solid rgba(185, 243, 76, 0.35);
+  background: rgba(185, 243, 76, 0.12);
+  color: var(--color-lime);
+}
+.btn-primary:hover:not(:disabled) { background: rgba(185, 243, 76, 0.2); }
+.btn-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--color-fog);
+}
+.btn-ghost:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.2); color: var(--color-snow); }
+.btn-primary:disabled, .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.text-glow-lime {
+  text-shadow: 0 0 18px rgba(185, 243, 76, 0.45);
+}
+
+.mask-fade-b {
+  mask-image: linear-gradient(180deg, black 82%, transparent 100%);
+}
+
+/* thin rule with dot */
+.rule-dot {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+  position: relative;
+}
+
+/* ---------- generated report ---------- */
+.report-md {
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: rgba(233, 236, 243, 0.88);
+}
+.report-md > *:first-child { margin-top: 0; }
+.report-md h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--color-snow);
+  margin: 0 0 14px;
+}
+.report-md h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16.5px;
+  color: var(--color-snow);
+  margin: 26px 0 10px;
+  padding-left: 11px;
+  border-left: 2px solid rgba(185, 243, 76, 0.55);
+}
+.report-md h3 {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: rgba(233, 236, 243, 0.95);
+  margin: 20px 0 8px;
+}
+.report-md h4 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+  margin: 16px 0 6px;
+}
+.report-md p { margin: 0 0 12px; }
+.report-md ul, .report-md ol { margin: 0 0 12px; padding-left: 20px; }
+.report-md ul { list-style: none; }
+.report-md ul > li { position: relative; margin-bottom: 6px; }
+.report-md ul > li::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(185, 243, 76, 0.65);
+}
+.report-md ol > li { margin-bottom: 6px; }
+.report-md ol > li::marker { color: var(--color-lime); font-family: var(--font-mono); font-size: 12px; }
+.report-md li > ul, .report-md li > ol { margin-top: 6px; }
+.report-md strong { color: var(--color-snow); font-weight: 700; }
+.report-md em { color: rgba(233, 236, 243, 0.75); }
+.report-md a {
+  color: var(--color-lime);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  word-break: break-all;
+}
+.report-md a:hover { color: #d1ff70; }
+.report-md code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(233, 236, 243, 0.92);
+}
+.report-md pre {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.35);
+  overflow-x: auto;
+}
+.report-md pre code { background: none; padding: 0; font-size: 12px; line-height: 1.7; }
+.report-md blockquote {
+  margin: 0 0 12px;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid rgba(122, 124, 255, 0.5);
+  color: rgba(139, 147, 167, 1);
+}
+.report-md blockquote p:last-child { margin-bottom: 0; }
+.report-md hr {
+  border: 0;
+  height: 1px;
+  margin: 22px 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02));
+}
+.report-md table {
+  width: 100%;
+  margin: 0 0 14px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.report-md th, .report-md td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 10px;
+  text-align: left;
+}
+.report-md th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--color-dim);
+  background: rgba(255, 255, 255, 0.03);
+}
+.report-md img { max-width: 100%; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); }
